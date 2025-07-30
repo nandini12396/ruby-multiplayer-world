@@ -1,0 +1,37 @@
+# Dockerfile
+FROM ruby:3.4-alpine
+
+# Install system dependencies
+RUN apk add --no-cache \
+    build-base \
+    git \
+    linux-headers
+
+# Set working directory
+WORKDIR /app
+
+# Copy Gemfile and install gems
+COPY Gemfile Gemfile.lock ./
+RUN bundle config --global frozen 1 && \
+    bundle install --jobs 4 --retry 3
+
+# Copy application code
+COPY . .
+
+# Create non-root user
+RUN addgroup -g 1000 -S ruby && \
+    adduser -u 1000 -S ruby -G ruby
+
+# Change ownership of app directory
+RUN chown -R ruby:ruby /app
+USER ruby
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/ || exit 1
+
+# Start the server
+CMD ["ruby", "multiplayer_server.rb"]
